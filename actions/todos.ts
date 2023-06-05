@@ -20,3 +20,8 @@ export async function doneTodo(id: string, done: boolean) {
   await db.todo.update({ where: { id }, data: { done: !done } });
   revalidatePath("/");
 }
+
+export async function updateText(id: string, text: string) {
+  await db.todo.update({ where: { id }, data: { text } });
+  revalidatePath("/");
+}
