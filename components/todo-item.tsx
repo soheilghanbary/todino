@@ -1,12 +1,12 @@
 "use client";
-import { doneTodo, removeTodo, updateText } from "@/actions/todos";
+import dayjs from "dayjs";
 import { Button } from "./ui/button";
 import { Todo } from "@prisma/client";
-import { useTransition } from "react";
-import { useMemo } from "react";
-import dayjs from "dayjs";
+import { useRef, useMemo, useTransition } from "react";
 import revalidatetime from "dayjs/plugin/relativeTime";
-import { useRef } from "react";
+import { doneTodo, removeTodo, updateText } from "@/actions/todos";
+import { itemsAtom } from "./todo-order";
+import { useAtom } from "jotai/react";
 
 dayjs.extend(revalidatetime);
 
@@ -14,6 +14,8 @@ export default function TodoItem({ done, text, id, published }: Todo) {
   const [isPending, startTransition] = useTransition();
   const day = useMemo(() => dayjs(published), [published]);
   const textRef = useRef<HTMLSpanElement | null>(null);
+
+  const [items, setItems] = useAtom(itemsAtom);
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLSpanElement>) => {
     if (event.key === "Enter") {
@@ -23,7 +25,7 @@ export default function TodoItem({ done, text, id, published }: Todo) {
   };
 
   return (
-    <li className="p-4 border rounded-md text-sm flex flex-col gap-4 max-w-xl justify-between">
+    <div className="p-2 border rounded-md text-sm flex flex-col space-y-2 max-w-2xl justify-between bg-secondary">
       <h2 className={done ? "line-through" : ""}>
         #{" "}
         <span
@@ -47,29 +49,43 @@ export default function TodoItem({ done, text, id, published }: Todo) {
           <Button
             onClick={() => {
               startTransition(async () => {
-                await doneTodo(id, done);
+                await doneTodo(id, done).then((res) => {
+                  setItems(
+                    items.map((item) => {
+                      if (item.id === res.id) {
+                        return { ...res };
+                      } else {
+                        return item;
+                      }
+                    })
+                  );
+                });
               });
             }}
             disabled={isPending}
-            variant={"outline"}
+            variant={"default"}
             size={"sm"}
+            className="text-xs"
           >
             {done ? "UnComplete" : "Complete"}
           </Button>
           <Button
             onClick={() => {
               startTransition(async () => {
-                await removeTodo(id);
+                await removeTodo(id).then((res) => {
+                  setItems(items.filter((item) => item.id !== res.id));
+                });
               });
             }}
             variant={"destructive"}
             size={"sm"}
             disabled={isPending}
+            className="text-xs"
           >
             Delete
           </Button>
         </div>
       </div>
-    </li>
+    </div>
   );
 }
